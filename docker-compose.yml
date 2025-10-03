@@ -1,0 +1,76 @@
+# Docker Compose pour TrueSocial
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: truesocial-postgres
+    environment:
+      POSTGRES_DB: truesocial
+      POSTGRES_USER: truesocial
+      POSTGRES_PASSWORD: truesocial123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - truesocial-network
+
+  # Cache Redis
+  redis:
+    image: redis:7-alpine
+    container_name: truesocial-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - truesocial-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: truesocial-backend
+    environment:
+      DATABASE_URL: postgresql://truesocial:truesocial123@postgres:5432/truesocial
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: your-super-secret-jwt-key
+      JWT_REFRESH_SECRET: your-super-secret-refresh-key
+      PORT: 3001
+      NODE_ENV: production
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend/uploads:/app/uploads
+    networks:
+      - truesocial-network
+
+  # Frontend Next.js
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: truesocial-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+      NEXT_PUBLIC_SOCKET_URL: http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - truesocial-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  truesocial-network:
+    driver: bridge
