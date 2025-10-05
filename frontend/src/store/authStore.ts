@@ -161,7 +161,7 @@ export const useAuthStore = create<AuthState>()(
         
         // Rediriger vers la page de connexion
         if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+          window.location.href = '/auth/login';
         }
       },
 
@@ -297,7 +297,4 @@ export const useAuth = () => {
   };
 };
 
-// Initialiser le store au chargement de l'application
-if (typeof window !== 'undefined') {
-  useAuthStore.getState().initialize();
-}
+// L'initialisation est maintenant gérée par l'AuthProvider

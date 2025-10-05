@@ -31,7 +31,7 @@ export default function HomePage() {
   // Rediriger vers la page de connexion si non authentifié
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
-      router.push('/login');
+      router.push('/auth/login');
     }
   }, [isAuthenticated, isInitialized, router]);
 

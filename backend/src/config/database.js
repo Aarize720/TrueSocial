@@ -47,34 +47,27 @@ async function connectRedis() {
   try {
     redisClient = createClient({
       url: process.env.REDIS_URL || 'redis://localhost:6379',
-      retry_strategy: (options) => {
-        if (options.error && options.error.code === 'ECONNREFUSED') {
-          logger.error('Redis server refuse la connexion');
-          return new Error('Redis server refuse la connexion');
-        }
-        if (options.total_retry_time > 1000 * 60 * 60) {
-          logger.error('Timeout de retry Redis atteint');
-          return new Error('Timeout de retry Redis atteint');
-        }
-        if (options.attempt > 10) {
-          logger.error('Nombre maximum de tentatives Redis atteint');
-          return undefined;
-        }
-        // Reconnexion après délai
-        return Math.min(options.attempt * 100, 3000);
+      socket: {
+        reconnectStrategy: false, // Désactiver les reconnexions automatiques
+        connectTimeout: 2000 // Timeout de 2 secondes
       }
     });
 
     redisClient.on('error', (err) => {
-      logger.error('Erreur Redis:', err);
+      // Ne logger qu'une fois l'erreur
+      if (err.code === 'ECONNREFUSED') {
+        logger.warn('⚠️  Redis non disponible (ECONNREFUSED)');
+      } else {
+        logger.error('Erreur Redis:', err);
+      }
     });
 
     redisClient.on('connect', () => {
-      logger.info('Redis connecté');
+      logger.info('✅ Redis connecté');
     });
 
     redisClient.on('ready', () => {
-      logger.info('Redis prêt');
+      logger.info('✅ Redis prêt');
     });
 
     redisClient.on('end', () => {
@@ -84,7 +77,8 @@ async function connectRedis() {
     await redisClient.connect();
     return redisClient;
   } catch (error) {
-    logger.error('Erreur connexion Redis:', error);
+    logger.warn('⚠️  Impossible de se connecter à Redis:', error.message);
+    redisClient = null; // S'assurer que le client est null en cas d'échec
     throw error;
   }
 }

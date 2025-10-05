@@ -108,13 +108,18 @@ const userValidation = {
 
   searchUsers: Joi.object({
     q: Joi.string().min(1).max(100).required(),
-    ...schemas.pagination
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    cursor: Joi.string().optional()
   }),
 
   getUserPosts: Joi.object({
     userId: schemas.uuid,
-    ...schemas.pagination,
-    ...schemas.sort
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    cursor: Joi.string().optional(),
+    sortBy: Joi.string().valid('created_at', 'updated_at', 'likes_count', 'comments_count').default('created_at'),
+    sortOrder: Joi.string().valid('asc', 'desc').default('desc')
   })
 };
 
@@ -159,7 +164,8 @@ const postValidation = {
   }),
 
   getFeed: Joi.object({
-    ...schemas.pagination,
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
     cursor: Joi.string().optional()
   }),
 
@@ -173,7 +179,9 @@ const postValidation = {
 
   getPostLikes: Joi.object({
     postId: schemas.uuid,
-    ...schemas.pagination
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    cursor: Joi.string().optional()
   })
 };
 
@@ -191,7 +199,9 @@ const commentValidation = {
 
   getComments: Joi.object({
     postId: schemas.uuid,
-    ...schemas.pagination,
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    cursor: Joi.string().optional(),
     parentId: schemas.optionalUuid
   }),
 
@@ -211,7 +221,9 @@ const storyValidation = {
 
   getStories: Joi.object({
     userId: schemas.optionalUuid,
-    ...schemas.pagination
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    cursor: Joi.string().optional()
   }),
 
   viewStory: Joi.object({
@@ -227,19 +239,25 @@ const followValidation = {
 
   getFollowers: Joi.object({
     userId: schemas.uuid,
-    ...schemas.pagination
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    cursor: Joi.string().optional()
   }),
 
   getFollowing: Joi.object({
     userId: schemas.uuid,
-    ...schemas.pagination
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    cursor: Joi.string().optional()
   })
 };
 
 // Validation pour les notifications
 const notificationValidation = {
   getNotifications: Joi.object({
-    ...schemas.pagination,
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    cursor: Joi.string().optional(),
     unreadOnly: Joi.boolean().default(false)
   }),
 
@@ -253,18 +271,25 @@ const searchValidation = {
   search: Joi.object({
     q: Joi.string().min(1).max(100).required(),
     type: Joi.string().valid('users', 'posts', 'hashtags', 'all').default('all'),
-    ...schemas.pagination
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    cursor: Joi.string().optional()
   }),
 
   searchHashtags: Joi.object({
     q: Joi.string().min(1).max(50).required(),
-    ...schemas.pagination
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    cursor: Joi.string().optional()
   }),
 
   getHashtagPosts: Joi.object({
     hashtag: Joi.string().min(1).max(50).required(),
-    ...schemas.pagination,
-    ...schemas.sort
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    cursor: Joi.string().optional(),
+    sortBy: Joi.string().valid('created_at', 'updated_at', 'likes_count', 'comments_count').default('created_at'),
+    sortOrder: Joi.string().valid('asc', 'desc').default('desc')
   })
 };
 

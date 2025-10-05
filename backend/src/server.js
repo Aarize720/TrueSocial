@@ -14,7 +14,8 @@ const { Server } = require('socket.io');
 require('dotenv').config();
 
 // Import des modules internes
-const { connectDB, connectRedis } = require('./config/database');
+const { connectDB: connectLegacyDB, connectRedis } = require('./config/database');
+const { prisma, connectDB: connectPrisma, disconnectDB: disconnectPrisma } = require('./config/prisma');
 const { setupPassport } = require('./config/passport');
 const { logger } = require('./utils/logger');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
@@ -137,21 +138,50 @@ setupWebSocket(io);
 // Fonction de démarrage du serveur
 async function startServer() {
   try {
-    // Connexion à la base de données
-    await connectDB();
-    logger.info('✅ Connexion PostgreSQL établie');
+    logger.info('🚀 Démarrage du serveur TrueSocial...');
 
-    // Connexion à Redis
-    await connectRedis();
-    logger.info('✅ Connexion Redis établie');
+    // Connexion à Prisma (prioritaire)
+    try {
+      await connectPrisma();
+      logger.info('✅ Connexion Prisma établie');
+    } catch (error) {
+      logger.error('❌ Erreur connexion Prisma:', error.message);
+      logger.warn('⚠️  Tentative de connexion avec l\'ancien système PostgreSQL...');
+      
+      try {
+        await connectLegacyDB();
+        logger.info('✅ Connexion PostgreSQL (legacy) établie');
+      } catch (legacyError) {
+        logger.error('❌ Impossible de se connecter à la base de données');
+        logger.error('💡 Assurez-vous que PostgreSQL est installé et que la base de données existe');
+        logger.error('💡 Exécutez: psql -U postgres -f setup-database.sql');
+        throw legacyError;
+      }
+    }
+
+    // Connexion à Redis (optionnelle)
+    try {
+      await connectRedis();
+      logger.info('✅ Connexion Redis établie');
+    } catch (error) {
+      logger.warn('⚠️  Redis non disponible, certaines fonctionnalités seront limitées');
+      logger.warn('💡 Pour installer Redis: https://redis.io/download');
+    }
 
     // Démarrage du serveur
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {
-      logger.info(`🚀 Serveur démarré sur le port ${PORT}`);
+      logger.info('');
+      logger.info('═══════════════════════════════════════════════════════');
+      logger.info(`🎉 Serveur TrueSocial démarré avec succès!`);
+      logger.info('═══════════════════════════════════════════════════════');
       logger.info(`📱 Environment: ${process.env.NODE_ENV}`);
-      logger.info(`🌐 API disponible sur: http://localhost:${PORT}/api`);
-      logger.info(`🔌 WebSocket disponible sur: ws://localhost:${PORT}`);
+      logger.info(`🌐 API: http://localhost:${PORT}/api`);
+      logger.info(`🏥 Health: http://localhost:${PORT}/health`);
+      logger.info(`🔌 WebSocket: ws://localhost:${PORT}`);
+      logger.info(`📊 Prisma Studio: npm run prisma:studio`);
+      logger.info('═══════════════════════════════════════════════════════');
+      logger.info('');
     });
 
     // Gestion gracieuse de l'arrêt
@@ -159,7 +189,19 @@ async function startServer() {
     process.on('SIGINT', gracefulShutdown);
 
   } catch (error) {
-    logger.error('❌ Erreur lors du démarrage du serveur:', error);
+    logger.error('');
+    logger.error('═══════════════════════════════════════════════════════');
+    logger.error('❌ ERREUR FATALE - Impossible de démarrer le serveur');
+    logger.error('═══════════════════════════════════════════════════════');
+    logger.error(error);
+    logger.error('');
+    logger.error('📋 CHECKLIST DE DÉPANNAGE:');
+    logger.error('  1. PostgreSQL est-il installé? → psql --version');
+    logger.error('  2. La base de données existe-t-elle? → psql -U postgres -f setup-database.sql');
+    logger.error('  3. Le fichier .env est-il configuré? → DATABASE_URL=...');
+    logger.error('  4. Prisma est-il généré? → npm run prisma:generate');
+    logger.error('  5. Les migrations sont-elles appliquées? → npm run prisma:migrate');
+    logger.error('');
     process.exit(1);
   }
 }
@@ -172,11 +214,15 @@ async function gracefulShutdown(signal) {
     logger.info('🔌 Serveur HTTP fermé');
     
     try {
-      // Fermer les connexions base de données
+      // Fermer Prisma
+      await disconnectPrisma();
+      logger.info('💾 Prisma déconnecté');
+      
+      // Fermer les connexions legacy
       const { closeDB, closeRedis } = require('./config/database');
       await closeDB();
       await closeRedis();
-      logger.info('💾 Connexions base de données fermées');
+      logger.info('💾 Connexions legacy fermées');
       
       process.exit(0);
     } catch (error) {

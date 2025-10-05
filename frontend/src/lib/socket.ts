@@ -12,9 +12,8 @@ class SocketManager {
   private listeners: Map<string, Set<Function>> = new Map();
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      this.connect();
-    }
+    // Ne pas se connecter automatiquement
+    // La connexion sera initiée par l'AuthProvider quand l'utilisateur est authentifié
   }
 
   connect(): void {

@@ -110,7 +110,7 @@ class ApiClient {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      window.location.href = '/auth/login';
     }
   }
 
@@ -175,6 +175,9 @@ class ApiClient {
 
 // Instance singleton de l'API client
 export const apiClient = new ApiClient();
+
+// Export de l'instance comme 'api' pour la compatibilité
+export const api = apiClient;
 
 // Fonctions utilitaires pour les appels API spécifiques
 

@@ -1,13 +1,16 @@
 // Utilitaires généraux pour l'application
 import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwindcss-merge';
-import { format, formatDistanceToNow, isToday, isYesterday, parseISO } from 'date-fns';
+import { twMerge } from 'tailwind-merge';
+import { format, formatDistanceToNow as formatDistanceToNowFn, isToday, isYesterday, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 // Fonction pour combiner les classes CSS avec Tailwind
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+// Ré-exporter formatDistanceToNow pour l'utiliser dans d'autres composants
+export { formatDistanceToNowFn as formatDistanceToNow };
 
 // Formatage des dates
 export const formatDate = {
@@ -394,3 +397,8 @@ export const errorUtils = {
     return error?.response?.status === 401;
   },
 };
+
+// Exports directs pour la compatibilité avec les imports existants
+export const debounce = performanceUtils.debounce;
+export { formatNumber };
+export { validateFile };

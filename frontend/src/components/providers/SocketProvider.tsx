@@ -73,11 +73,15 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     const handleComment = (data: { post_id: string; comment: any }) => {
       console.log('💬 Commentaire reçu:', data);
       // Mettre à jour le compteur de commentaires
-      const post = usePostStore.getState().getPost(data.post_id);
-      if (post) {
-        updatePostInStore(data.post_id, {
-          comments_count: post.comments_count + 1,
-        });
+      try {
+        const post = usePostStore.getState().getPost(data.post_id);
+        if (post) {
+          updatePostInStore(data.post_id, {
+            comments_count: post.comments_count + 1,
+          });
+        }
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour du commentaire:', error);
       }
     };
 

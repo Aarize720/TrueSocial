@@ -1,0 +1,276 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  username        String   @unique
+  password        String?
+  fullName        String?  @map("full_name")
+  bio             String?
+  avatarUrl       String?  @map("avatar_url")
+  website         String?
+  phone           String?
+  isVerified      Boolean  @default(false) @map("is_verified")
+  isPrivate       Boolean  @default(false) @map("is_private")
+  isActive        Boolean  @default(true) @map("is_active")
+  postsCount      Int      @default(0) @map("posts_count")
+  followersCount  Int      @default(0) @map("followers_count")
+  followingCount  Int      @default(0) @map("following_count")
+  lastLoginAt     DateTime? @map("last_login_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  posts                Post[]
+  comments             Comment[]
+  likes                Like[]
+  stories              Story[]
+  storyViews           StoryView[]
+  followers            Follow[]  @relation("UserFollowers")
+  following            Follow[]  @relation("UserFollowing")
+  sentNotifications    Notification[] @relation("NotificationSender")
+  receivedNotifications Notification[] @relation("NotificationRecipient")
+  savedPosts           SavedPost[]
+  messages             Message[]
+  conversationMembers  ConversationMember[]
+
+  @@map("users")
+}
+
+model Post {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  caption       String?
+  mediaUrls     Json     @map("media_urls")
+  mediaType     String   @map("media_type") // 'image', 'video', 'carousel'
+  location      String?
+  hashtags      String[] @default([])
+  mentions      String[] @default([])
+  likesCount    Int      @default(0) @map("likes_count")
+  commentsCount Int      @default(0) @map("comments_count")
+  isArchived    Boolean  @default(false) @map("is_archived")
+  isHidden      Boolean  @default(false) @map("is_hidden")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments      Comment[]
+  likes         Like[]
+  savedBy       SavedPost[]
+  notifications Notification[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("posts")
+}
+
+model Comment {
+  id            String   @id @default(uuid())
+  postId        String   @map("post_id")
+  userId        String   @map("user_id")
+  parentId      String?  @map("parent_id")
+  content       String
+  likesCount    Int      @default(0) @map("likes_count")
+  repliesCount  Int      @default(0) @map("replies_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  post          Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent        Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[] @relation("CommentReplies")
+  notifications Notification[]
+
+  @@index([postId])
+  @@index([userId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("likes")
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String   @map("follower_id")
+  followingId String   @map("following_id")
+  status      String   @default("accepted") // 'pending', 'accepted'
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  follower    User     @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+model Story {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  mediaUrl    String   @map("media_url")
+  mediaType   String   @map("media_type") // 'image', 'video'
+  duration    Int      @default(5) // seconds
+  viewsCount  Int      @default(0) @map("views_count")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  views       StoryView[]
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("stories")
+}
+
+model StoryView {
+  id        String   @id @default(uuid())
+  storyId   String   @map("story_id")
+  userId    String   @map("user_id")
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+
+  // Relations
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, userId])
+  @@index([storyId])
+  @@index([userId])
+  @@map("story_views")
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  recipientId String   @map("recipient_id")
+  senderId    String?  @map("sender_id")
+  type        String   // 'like', 'comment', 'follow', 'follow_request', 'mention'
+  postId      String?  @map("post_id")
+  commentId   String?  @map("comment_id")
+  title       String
+  message     String
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  recipient   User     @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  sender      User?    @relation("NotificationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  post        Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment     Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model SavedPost {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  postId    String   @map("post_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@index([postId])
+  @@map("saved_posts")
+}
+
+model TrendingHashtag {
+  id          String   @id @default(uuid())
+  hashtag     String   @unique
+  postsCount  Int      @default(0) @map("posts_count")
+  trendScore  Float    @default(0) @map("trend_score")
+  lastUsedAt  DateTime @default(now()) @map("last_used_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([trendScore])
+  @@index([lastUsedAt])
+  @@map("trending_hashtags")
+}
+
+model Conversation {
+  id          String   @id @default(uuid())
+  isGroup     Boolean  @default(false) @map("is_group")
+  name        String?
+  avatarUrl   String?  @map("avatar_url")
+  lastMessageAt DateTime? @map("last_message_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  members     ConversationMember[]
+  messages    Message[]
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id              String   @id @default(uuid())
+  conversationId  String   @map("conversation_id")
+  userId          String   @map("user_id")
+  role            String   @default("member") // 'admin', 'member'
+  lastReadAt      DateTime? @map("last_read_at")
+  joinedAt        DateTime @default(now()) @map("joined_at")
+
+  // Relations
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id              String   @id @default(uuid())
+  conversationId  String   @map("conversation_id")
+  senderId        String   @map("sender_id")
+  content         String?
+  mediaUrl        String?  @map("media_url")
+  mediaType       String?  @map("media_type") // 'image', 'video', 'audio'
+  isRead          Boolean  @default(false) @map("is_read")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}

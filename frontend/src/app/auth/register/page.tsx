@@ -12,9 +12,11 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, loading, error, isAuthenticated } = useAuthStore();
+  const { register, isLoading, isAuthenticated } = useAuthStore();
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     username: '',
+    full_name: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -60,14 +62,20 @@ export default function RegisterPage() {
       return;
     }
 
-    const success = await register({
-      username: formData.username,
-      email: formData.email,
-      password: formData.password,
-    });
+    setError(null);
 
-    if (success) {
+    try {
+      await register({
+        username: formData.username,
+        full_name: formData.full_name,
+        email: formData.email,
+        password: formData.password,
+      });
       router.push('/');
+    } catch (error: any) {
+      // L'erreur est déjà gérée dans le store avec toast
+      setError(error?.response?.data?.message || 'Erreur lors de l\'inscription');
+      console.error('Register error:', error);
     }
   };
 
@@ -126,6 +134,17 @@ export default function RegisterPage() {
               required
               placeholder="votre_nom_utilisateur"
               error={validationErrors.username}
+            />
+
+            <Input
+              label="Nom complet"
+              type="text"
+              name="full_name"
+              value={formData.full_name}
+              onChange={handleChange}
+              required
+              placeholder="Votre nom complet"
+              error={validationErrors.full_name}
             />
 
             <Input

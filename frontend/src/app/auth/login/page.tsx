@@ -12,7 +12,8 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loading, error, isAuthenticated } = useAuthStore();
+  const { login, isLoading, isAuthenticated } = useAuthStore();
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -28,10 +29,15 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
-    const success = await login(formData.email, formData.password);
-    if (success) {
+    try {
+      await login(formData);
       router.push('/');
+    } catch (error: any) {
+      // L'erreur est déjà gérée dans le store avec toast
+      setError(error?.response?.data?.message || 'Erreur de connexion');
+      console.error('Login error:', error);
     }
   };
 
@@ -132,12 +138,12 @@ export default function LoginPage() {
 
           <Button
             type="submit"
-            variant="primary"
+            variant="default"
             size="lg"
             className="w-full"
-            disabled={loading}
+            disabled={isLoading}
           >
-            {loading ? <LoadingSpinner size="sm" /> : 'Se connecter'}
+            {isLoading ? <LoadingSpinner size="sm" /> : 'Se connecter'}
           </Button>
         </form>
 
